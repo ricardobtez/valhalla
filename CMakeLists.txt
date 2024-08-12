@@ -117,7 +117,7 @@ endif()
 set(CMAKE_FIND_PACKAGE_PREFER_CONFIG ON)
 
 # Boost has no .pc file..
-find_package(Boost 1.71 REQUIRED)
+find_package(Boost REQUIRED)
 add_definitions(-DBOOST_NO_CXX11_SCOPED_ENUMS)
 add_definitions(-DBOOST_ALLOW_DEPRECATED_HEADERS)
 add_definitions(-DBOOST_BIND_GLOBAL_PLACEHOLDERS)
@@ -125,51 +125,28 @@ add_definitions(-DBOOST_BIND_GLOBAL_PLACEHOLDERS)
 find_package(PkgConfig REQUIRED)
 find_package(Threads REQUIRED)
 
-# resolve vendored libraries
-set(date_include_dir ${VALHALLA_SOURCE_DIR}/third_party/date/include)
-set(rapidjson_include_dir ${CMAKE_SOURCE_DIR}/third_party/rapidjson/include)
-set(robinhoodhashing_include_dir ${CMAKE_SOURCE_DIR}/third_party/robin-hood-hashing/src/include)
-set(cxxopts_include_dir ${VALHALLA_SOURCE_DIR}/third_party/cxxopts/include)
-set(dirent_include_dir ${CMAKE_SOURCE_DIR}/third_party/dirent/include)
-if (PREFER_EXTERNAL_DEPS)
-  # date
-  find_package(date QUIET)
-  if (date_FOUND)
-    get_target_property(date_include_dir date::date INTERFACE_INCLUDE_DIRECTORIES)
+# date
+find_package(date REQUIRED)
+get_target_property(date_include_dir date::date INTERFACE_INCLUDE_DIRECTORIES)
+
+# rapidjson
+find_package(RapidJSON REQUIRED)
+get_target_property(rapidjson_include_dir rapidjson INTERFACE_INCLUDE_DIRECTORIES)
+
+# robin-hood-hashing
+find_package(robin_hood REQUIRED)
+get_target_property(robinhoodhashing_include_dir robin_hood::robin_hood INTERFACE_INCLUDE_DIRECTORIES)
+
+# cxxopts
+if (ENABLE_DATA_TOOLS OR ENABLE_TOOLS)
+  find_package(cxxopts QUIET)
+  if (cxxopts_FOUND)
+    get_target_property(cxxopts_include_dir cxxopts::cxxopts INTERFACE_INCLUDE_DIRECTORIES)
   else()
-    message(WARNING "No date found in system libraries, using vendored date...")
-  endif()
-  # rapidjson
-  find_package(RapidJSON QUIET)
-  if (RapidJSON_FOUND)
-    get_target_property(rapidjson_include_dir rapidjson INTERFACE_INCLUDE_DIRECTORIES)
-  else()
-    message(WARNING "No RapidJSON found in system libraries, using vendored RapidJSON...")
-  endif()
-  # robin-hood-hashing
-  find_package(robin_hood QUIET)
-  if (robin_hood_FOUND)
-    get_target_property(robinhoodhashing_include_dir robin_hood::robin_hood INTERFACE_INCLUDE_DIRECTORIES)
-  else()
-    message(WARNING "No robin_hood found in system libraries, using vendored robin_hood...")
-  endif()
-  # cxxopts
-  if (ENABLE_DATA_TOOLS OR ENABLE_TOOLS)
-    find_package(cxxopts QUIET)
-    if (cxxopts_FOUND)
-      get_target_property(cxxopts_include_dir cxxopts::cxxopts INTERFACE_INCLUDE_DIRECTORIES)
-    else()
-      message(WARNING "No cxxopts found in system libraries, using vendored cxxopts...")
-    endif()
-  endif()
-  # dirent
-  if (WIN32)
-    find_path(dirent_include_dir dirent.h REQUIRED)
-    if (dirent_include_dir-NOTFOUND)
-      message(WARNING "No dirent.h found in system headers, using vendored dirent.h...")
-    endif()
+    message(WARNING "No cxxopts found in system libraries, using vendored cxxopts...")
   endif()
 endif()
+
 
 # Protobuf is non-trivial to include via pkg-config, pkg_check_modules has no way to check
 # for protoc location in a platform agnostic manner
@@ -342,10 +319,6 @@ install(DIRECTORY ${rapidjson_include_dir}/
   DESTINATION "${CMAKE_INSTALL_INCLUDEDIR}/valhalla/third_party")
 install(DIRECTORY ${date_include_dir}/
   DESTINATION "${CMAKE_INSTALL_INCLUDEDIR}/valhalla/third_party")
-if (WIN32)
-  install(DIRECTORY ${dirent_include_dir}/
-    DESTINATION "${CMAKE_INSTALL_INCLUDEDIR}/valhalla/third_party")
-endif()
 
 if(ENABLE_TESTS)
   add_subdirectory(test)
